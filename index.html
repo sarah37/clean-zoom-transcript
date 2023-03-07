@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>" />
+
+    <title>Clean Zoom Transcript</title>
+
+    <style>
+      body {
+        background: linear-gradient(to right, #c2e59c, #64b3f4);
+        font-family: monospace;
+        padding: 10px;
+      }
+      textarea {
+        background-color: #fff8;
+        border: 1px solid #000;
+      }
+      button {
+        background-color: #eee8;
+        border: 1px solid #000;
+        padding: 6px;
+        border-radius: 6px;
+        font-family: monospace;
+        margin: 10px 0;
+      }
+      button:hover {
+        background-color: #eee;
+      }
+      #transcript-output {
+        border: 1px solid;
+        padding: 3px;
+        background-color: #fff8;
+      }
+      .hidden {
+        visibility: hidden;
+        opacity: 0;
+        transition: visibility 0s 1s, opacity 1s linear;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Clean Zoom Transcript Tool</h1>
+
+    <p>
+      Paste an auto-generated Zoom transcript (the contents of the .vtt file
+      included in the recording) below, and click the button the generate the
+      cleaned output. This tool removes metadata (timestamps and line numbers)
+      and combines everything said by the same person without interruptions by
+      others into a single line, without repeating their name across multiple
+      lines. This tool does not modify the content of the transcript (spelling,
+      punctuation, etc.)
+    </p>
+    <p style="font-weight: bold">
+      Your transcript is not uploaded, the conversion happens in your browser!
+    </p>
+    <h2>Input</h2>
+    <textarea id="transcript-input" cols="80" rows="10"></textarea>
+    <br />
+    <button id="button-clean">Generate output</button>
+
+    <h2>Output</h2>
+    <button id="button-copy">Copy output to clipboard</button>
+    <span id="copy-message" class="hidden">Copied!</span>
+    <!-- prettier-ignore -->
+    <div id="transcript-output" style="white-space: pre-line"><i>Your generated output will appear here.</i></div>
+
+    <script type="text/javascript">
+      document
+        .getElementById("button-clean")
+        .addEventListener("click", cleanTranscript);
+      document
+        .getElementById("button-copy")
+        .addEventListener("click", copyTranscript);
+
+      // define RegEx
+      const number = /^\d+$/; // only a number
+      const timestamp = /\d{2}:\d{2}:\d{2}.\d{3} --\> \d{2}:\d{2}:\d{2}.\d{3}/; // time stamps
+
+      // output is global so we can copy easily
+      let output = "";
+
+      function cleanTranscript() {
+        let input = document.getElementById("transcript-input").value;
+
+        let filtered = input
+          .split("\n") // split into separate strings for each line
+          .filter(
+            (d) =>
+              d !== "WEBVTT" && // remove first line that says WEBVTT
+              d !== "" && // remove empty lines
+              !timestamp.test(d) && // remove timestamps
+              !number.test(d) // remove numbering
+          );
+
+        // add first line of the filtered transcript to output string
+        output = filtered[0];
+
+        for (let i = 1; i < filtered.length; i++) {
+          if (
+            // check if the name (the part before the first colon) is the same as the previous line
+            filtered[i].substring(0, filtered[i].indexOf(":")) ===
+            filtered[i - 1].substring(0, filtered[i - 1].indexOf(":"))
+          ) {
+            // then we only add what they said and don't repeat the name
+            output += filtered[i].substring(filtered[i].indexOf(":") + 1);
+          } else {
+            // if the name is different, we add everything (and a new line)
+            output += "\n" + filtered[i];
+          }
+        }
+
+        document.getElementById("transcript-output").innerHTML = output;
+      }
+
+      function copyTranscript() {
+        navigator.clipboard.writeText(output);
+        document.getElementById("copy-message").classList.remove("hidden");
+        setTimeout(() => {
+          document.getElementById("copy-message").classList.add("hidden");
+        }, 500);
+      }
+    </script>
+  </body>
+</html>
